@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Cuestionario Interactivo</title>
+
+  <!-- Bootstrap -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+
+  <!-- SweetAlert -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+
+    body{
+      background:linear-gradient(135deg,#ffd6e0,#ffc2d1);
+      min-height:100vh;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding:20px;
+    }
+
+    .quiz-card{
+      max-width:800px;
+      width:100%;
+      border:none;
+      border-radius:25px;
+      overflow:hidden;
+    }
+
+    .title{
+      color:#d63384;
+      font-weight:bold;
+    }
+
+    .question{
+      font-size:1.4rem;
+      font-weight:bold;
+      color:#c2185b;
+    }
+
+    .option-btn{
+      width:100%;
+      text-align:left;
+      margin-bottom:15px;
+      padding:15px;
+      border-radius:15px;
+      transition:.3s;
+      font-size:1rem;
+      font-weight:500;
+    }
+
+    .option-btn:hover{
+      transform:scale(1.02);
+    }
+
+    .correct{
+      background:#198754 !important;
+      color:white !important;
+      border:none !important;
+    }
+
+    .incorrect{
+      background:#dc3545 !important;
+      color:white !important;
+      border:none !important;
+    }
+
+    .timer{
+      font-size:1.2rem;
+      font-weight:bold;
+      color:#c2185b;
+    }
+
+    .progress{
+      height:20px;
+      border-radius:20px;
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="card shadow-lg quiz-card">
+
+  <div class="card-body p-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+
+      <h1 class="title">
+        💄 Quiz de Maquillaje
+      </h1>
+
+      <div class="timer">
+        ⏱ Tiempo:
+        <span id="time">00:00</span>
+      </div>
+
+    </div>
+
+    <!-- PROGRESO -->
+    <div class="progress mb-4">
+
+      <div
+        class="progress-bar bg-danger"
+        id="progressBar"
+        style="width:0%"
+      ></div>
+
+    </div>
+
+    <!-- PREGUNTA -->
+    <div id="quiz-container">
+
+      <h2
+        class="question mb-4"
+        id="question"
+      ></h2>
+
+      <div id="options"></div>
+
+    </div>
+
+    <!-- BOTONES -->
+    <div class="d-flex justify-content-between mt-4">
+
+      <button
+        class="btn btn-outline-danger px-4"
+        onclick="restartQuiz()"
+      >
+        🔄 Reiniciar
+      </button>
+
+      <button
+        class="btn btn-danger px-4"
+        id="nextBtn"
+        onclick="nextQuestion()"
+        disabled
+      >
+        Siguiente →
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+  // ==========================
+  // PREGUNTAS
+  // ==========================
+
+  const questions = [
+
+    {
+      question:"¿Qué marca es famosa por su lema 'Porque tú lo vales'?",
+      options:["MAC","L'Oréal","NYX","Dior"],
+      answer:"L'Oréal"
+    },
+
+    {
+      question:"¿Qué marca es conocida por vender maquillaje por catálogo?",
+      options:["Avon","NARS","Clinique","Sephora"],
+      answer:"Avon"
+    },
+
+    {
+      question:"¿Cuál es una marca de maquillaje profesional muy popular?",
+      options:["MAC","Maybelline","Revlon","NYX"],
+      answer:"MAC"
+    },
+
+    {
+      question:"¿Qué marca es famosa por sus rubores?",
+      options:["NARS","Dior","Clinique","Avon"],
+      answer:"NARS"
+    },
+
+    {
+      question:"¿Qué tienda internacional vende cosméticos y perfumes?",
+      options:["Sephora","Revlon","MAC","NYX"],
+      answer:"Sephora"
+    }
+
+  ];
+
+  // ==========================
+  // VARIABLES
+  // ==========================
+
+  let currentQuestion = 0;
+
+  let score = 0;
+
+  let seconds = 0;
+
+  let timer;
+
+  // ==========================
+  // ELEMENTOS
+  // ==========================
+
+  const questionElement =
+    document.getElementById("question");
+
+  const optionsElement =
+    document.getElementById("options");
+
+  const nextBtn =
+    document.getElementById("nextBtn");
+
+  const progressBar =
+    document.getElementById("progressBar");
+
+  // ==========================
+  // MOSTRAR PREGUNTA
+  // ==========================
+
+  function loadQuestion(){
+
+    nextBtn.disabled = true;
+
+    const q =
+      questions[currentQuestion];
+
+    questionElement.textContent =
+      q.question;
+
+    optionsElement.innerHTML = "";
+
+    q.options.forEach(option=>{
+
+      const button =
+        document.createElement("button");
+
+      button.className =
+        "btn btn-outline-danger option-btn";
+
+      button.textContent = option;
+
+      button.onclick = () =>
+        selectAnswer(button, option);
+
+      optionsElement.appendChild(button);
+
+    });
+
+    updateProgress();
+
+  }
+
+  // ==========================
+  // SELECCIONAR RESPUESTA
+  // ==========================
+
+  function selectAnswer(button, option){
+
+    const correctAnswer =
+      questions[currentQuestion].answer;
+
+    const buttons =
+      document.querySelectorAll(".option-btn");
+
+    buttons.forEach(btn=>{
+
+      btn.disabled = true;
+
+      if(btn.textContent === correctAnswer){
+
+        btn.classList.add("correct");
+
+      }
+
+    });
+
+    // RESPUESTA CORRECTA
+    if(option === correctAnswer){
+
+      score++;
+
+    }
+
+    // RESPUESTA INCORRECTA
+    else{
+
+      button.classList.add("incorrect");
+
+    }
+
+    nextBtn.disabled = false;
+
+  }
+
+  // ==========================
+  // SIGUIENTE
+  // ==========================
+
+  function nextQuestion(){
+
+    currentQuestion++;
+
+    if(currentQuestion < questions.length){
+
+      loadQuestion();
+
+    }
+
+    else{
+
+      finishQuiz();
+
+    }
+
+  }
+
+  // ==========================
+  // FINALIZAR
+  // ==========================
+
+  function finishQuiz(){
+
+    clearInterval(timer);
+
+    Swal.fire({
+
+      title:"🎉 Cuestionario Finalizado",
+
+      html:`
+        <h3>Tu puntuación:</h3>
+        <h1 style="color:#d63384">
+          ${score} / ${questions.length}
+        </h1>
+      `,
+
+      icon:"success",
+
+      confirmButtonColor:"#d63384"
+
+    });
+
+  }
+
+  // ==========================
+  // PROGRESO
+  // ==========================
+
+  function updateProgress(){
+
+    const progress =
+      ((currentQuestion)
+      / questions.length) * 100;
+
+    progressBar.style.width =
+      `${progress}%`;
+
+  }
+
+  // ==========================
+  // TIMER
+  // ==========================
+
+  function startTimer(){
+
+    clearInterval(timer);
+
+    seconds = 0;
+
+    timer = setInterval(()=>{
+
+      seconds++;
+
+      let mins =
+        Math.floor(seconds / 60);
+
+      let secs =
+        seconds % 60;
+
+      document.getElementById("time")
+      .textContent =
+      `${String(mins).padStart(2,"0")}:${String(secs).padStart(2,"0")}`;
+
+    },1000);
+
+  }
+
+  // ==========================
+  // REINICIAR
+  // ==========================
+
+  function restartQuiz(){
+
+    currentQuestion = 0;
+
+    score = 0;
+
+    loadQuestion();
+
+    startTimer();
+
+  }
+
+  // ==========================
+  // INICIAR
+  // ==========================
+
+  loadQuestion();
+
+  startTimer();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Sopa de Letras Bootstrap</title>
+
+  <!-- Bootstrap -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+
+  <!-- SweetAlert -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+
+    body{
+      background:linear-gradient(135deg,#ffd6e0,#ffc2d1);
+      min-height:100vh;
+    }
+
+    .title{
+      color:#d63384;
+      font-weight:bold;
+    }
+
+    .word-grid{
+      display:grid;
+      grid-template-columns:repeat(15,40px);
+      gap:4px;
+      justify-content:center;
+    }
+
+    .cell{
+      width:40px;
+      height:40px;
+      background:#f8bbd0;
+      border-radius:8px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:bold;
+      font-size:20px;
+      cursor:pointer;
+      user-select:none;
+      transition:.2s;
+    }
+
+    .cell:hover{
+      background:#f48fb1;
+      transform:scale(1.05);
+    }
+
+    .selected{
+      background:#ff4081 !important;
+      color:white;
+    }
+
+    .found{
+      background:#198754 !important;
+      color:white;
+    }
+
+    .completed{
+      text-decoration:line-through;
+      background:#d1e7dd !important;
+      color:#198754 !important;
+      font-weight:bold;
+    }
+
+    .timer{
+      font-size:22px;
+      font-weight:bold;
+      color:#c2185b;
+    }
+
+    @media(max-width:768px){
+
+      .word-grid{
+        grid-template-columns:repeat(15,28px);
+      }
+
+      .cell{
+        width:28px;
+        height:28px;
+        font-size:14px;
+      }
+
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="container py-4">
+
+  <div class="card shadow-lg border-0 rounded-4">
+
+    <div class="card-body p-4">
+
+      <h1 class="text-center title mb-4">
+        💄 Sopa de Letras - Maquillaje
+      </h1>
+
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+
+        <div class="timer">
+          ⏱ Tiempo:
+          <span id="time">00:00</span>
+        </div>
+
+        <button
+          class="btn btn-danger px-4"
+          onclick="restartGame()"
+        >
+          🔄 Reiniciar
+        </button>
+
+      </div>
+
+      <div class="row g-4">
+
+        <!-- GRID -->
+        <div class="col-lg-8 text-center">
+
+          <div
+            class="word-grid mx-auto"
+            id="grid"
+          ></div>
+
+        </div>
+
+        <!-- PALABRAS -->
+        <div class="col-lg-4">
+
+          <div class="card shadow-sm border-0 rounded-4">
+
+            <div class="card-body">
+
+              <h4 class="text-danger mb-3">
+                ✅ Encuentra estas palabras
+              </h4>
+
+              <ul
+                class="list-group"
+                id="wordList"
+              ></ul>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+  // ==========================
+  // PALABRAS
+  // ==========================
+
+  const words = [
+
+    "MAC",
+    "LOREAL",
+    "DIOR",
+    "NYX",
+    "NARS",
+    "AVON",
+    "REVLON",
+    "SEPHORA",
+    "CLINIQUE",
+    "MAYBELLINE"
+
+  ];
+
+  // ==========================
+  // VARIABLES
+  // ==========================
+
+  const gridSize = 15;
+
+  let grid = [];
+
+  let selectedCells = [];
+
+  let foundWords = [];
+
+  let timer;
+
+  let seconds = 0;
+
+  const gridElement =
+    document.getElementById("grid");
+
+  const wordList =
+    document.getElementById("wordList");
+
+  // ==========================
+  // GRID VACIO
+  // ==========================
+
+  function createEmptyGrid(){
+
+    grid = [];
+
+    for(let r=0;r<gridSize;r++){
+
+      let row=[];
+
+      for(let c=0;c<gridSize;c++){
+
+        row.push("");
+
+      }
+
+      grid.push(row);
+
+    }
+
+  }
+
+  // ==========================
+  // COLOCAR PALABRAS
+  // SIN CRUCES
+  // ==========================
+
+  function placeWords(){
+
+    words.forEach(word=>{
+
+      let placed = false;
+
+      while(!placed){
+
+        let direction =
+          Math.random() < 0.5
+          ? "horizontal"
+          : "vertical";
+
+        let row =
+          Math.floor(Math.random()*gridSize);
+
+        let col =
+          Math.floor(Math.random()*gridSize);
+
+        let fits = true;
+
+        // HORIZONTAL
+        if(direction==="horizontal"){
+
+          if(col + word.length > gridSize){
+
+            fits = false;
+
+          }
+
+          if(fits){
+
+            for(let i=0;i<word.length;i++){
+
+              if(grid[row][col+i] !== ""){
+
+                fits = false;
+                break;
+
+              }
+
+            }
+
+          }
+
+          if(fits){
+
+            for(let i=0;i<word.length;i++){
+
+              grid[row][col+i] =
+                word[i];
+
+            }
+
+            placed = true;
+
+          }
+
+        }
+
+        // VERTICAL
+        else{
+
+          if(row + word.length > gridSize){
+
+            fits = false;
+
+          }
+
+          if(fits){
+
+            for(let i=0;i<word.length;i++){
+
+              if(grid[row+i][col] !== ""){
+
+                fits = false;
+                break;
+
+              }
+
+            }
+
+          }
+
+          if(fits){
+
+            for(let i=0;i<word.length;i++){
+
+              grid[row+i][col] =
+                word[i];
+
+            }
+
+            placed = true;
+
+          }
+
+        }
+
+      }
+
+    });
+
+    // ==========================
+    // LETRAS RANDOM
+    // ==========================
+
+    const letters =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    for(let r=0;r<gridSize;r++){
+
+      for(let c=0;c<gridSize;c++){
+
+        if(grid[r][c] === ""){
+
+          grid[r][c] =
+            letters[
+              Math.floor(
+                Math.random()*letters.length
+              )
+            ];
+
+        }
+
+      }
+
+    }
+
+  }
+
+  // ==========================
+  // DIBUJAR GRID
+  // ==========================
+
+  function drawGrid(){
+
+    gridElement.innerHTML = "";
+
+    for(let r=0;r<gridSize;r++){
+
+      for(let c=0;c<gridSize;c++){
+
+        const cell =
+          document.createElement("div");
+
+        cell.classList.add("cell");
+
+        cell.textContent =
+          grid[r][c];
+
+        cell.dataset.row = r;
+
+        cell.dataset.col = c;
+
+        cell.addEventListener(
+          "click",
+          ()=>selectCell(cell)
+        );
+
+        gridElement.appendChild(cell);
+
+      }
+
+    }
+
+  }
+
+  // ==========================
+  // LISTA PALABRAS
+  // ==========================
+
+  function drawWords(){
+
+    wordList.innerHTML = "";
+
+    words.forEach(word=>{
+
+      const li =
+        document.createElement("li");
+
+      li.className =
+        "list-group-item fw-bold";
+
+      li.id = word;
+
+      li.textContent = word;
+
+      wordList.appendChild(li);
+
+    });
+
+  }
+
+  // ==========================
+  // SELECCIONAR
+  // ==========================
+
+  function selectCell(cell){
+
+    if(cell.classList.contains("found")) return;
+
+    if(cell.classList.contains("selected")) return;
+
+    cell.classList.add("selected");
+
+    selectedCells.push(cell);
+
+    validateSelection();
+
+  }
+
+  // ==========================
+  // VALIDAR
+  // ==========================
+
+  function validateSelection(){
+
+    let selectedWord =
+      selectedCells
+      .map(c=>c.textContent)
+      .join("");
+
+    let reverseWord =
+      selectedWord
+      .split("")
+      .reverse()
+      .join("");
+
+    let valid =
+      words.includes(selectedWord)
+      || words.includes(reverseWord);
+
+    let possible =
+      words.some(word=>{
+
+        return word.startsWith(selectedWord)
+        || word.startsWith(reverseWord);
+
+      });
+
+    // INCORRECTA
+    if(!possible && !valid){
+
+      setTimeout(()=>{
+
+        selectedCells.forEach(cell=>{
+
+          cell.classList.remove("selected");
+
+        });
+
+        selectedCells = [];
+
+      },300);
+
+      return;
+
+    }
+
+    // PALABRA COMPLETA
+    if(valid){
+
+      let finalWord =
+        words.includes(selectedWord)
+        ? selectedWord
+        : reverseWord;
+
+      if(!foundWords.includes(finalWord)){
+
+        foundWords.push(finalWord);
+
+        selectedCells.forEach(cell=>{
+
+          cell.classList.remove("selected");
+
+          cell.classList.add("found");
+
+        });
+
+        document
+          .getElementById(finalWord)
+          .classList.add("completed");
+
+        selectedCells = [];
+
+        checkWin();
+
+      }
+
+    }
+
+  }
+
+  // ==========================
+  // GANAR
+  // ==========================
+
+  function checkWin(){
+
+    if(foundWords.length === words.length){
+
+      clearInterval(timer);
+
+      Swal.fire({
+
+        title:"🎉 ¡FELICIDADES!",
+
+        text:"Completaste la sopa de letras",
+
+        icon:"success",
+
+        confirmButtonColor:"#d63384"
+
+      });
+
+    }
+
+  }
+
+  // ==========================
+  // TIMER
+  // ==========================
+
+  function startTimer(){
+
+    clearInterval(timer);
+
+    seconds = 0;
+
+    timer = setInterval(()=>{
+
+      seconds++;
+
+      let mins =
+        Math.floor(seconds / 60);
+
+      let secs =
+        seconds % 60;
+
+      document.getElementById("time")
+      .textContent =
+      `${String(mins).padStart(2,"0")}:${String(secs).padStart(2,"0")}`;
+
+    },1000);
+
+  }
+
+  // ==========================
+  // REINICIAR
+  // ==========================
+
+  function restartGame(){
+
+    foundWords = [];
+
+    selectedCells = [];
+
+    createEmptyGrid();
+
+    placeWords();
+
+    drawGrid();
+
+    drawWords();
+
+    startTimer();
+
+  }
+
+  // ==========================
+  // INICIAR
+  // ==========================
+
+  restartGame();
+
+</script>
+
+</body>
+</html>
